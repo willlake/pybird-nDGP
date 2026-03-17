@@ -198,26 +198,18 @@ class Bird(object):
             
 
         if self.co.exact_time:
-            if "w0_fld" in cosmo: self.w0 = cosmo["w0_fld"]
-            else: self.w0 = None
-            if "Omega0_rc" in cosmo: 
-                self.Omega0_rc = cosmo["Omega0_rc"]
-                self.w0 = None   ##########Check this later
-            else: 
-                self.Omega0_rc = None
             self.Omega0_m = cosmo["Omega0_m"]
+            self.Omega0_rc = cosmo["Omega0_rc"]
+            self.H0 = cosmo["H0"]
+            self.w0 = cosmo["w0_fld"]
+            self.wa = cosmo["wa_fld"]
             self.z = cosmo["z"]
-            # print (self.z, self.Omega0_m)
-            self.a = 1/(1.+self.z)
-            GF = GreenFunction(self.Omega0_m, Omega0_rc=self.Omega0_rc,w=self.w0,NDa=self.co.NDa,aini_g=self.co.aini_g,aini_d=self.co.aini_d)
-            self.Y1 = GF.Y(self.a)
-            self.G1t = GF.mG1t(self.a)
-            self.V12t = GF.mV12t(self.a)
-            if self.co.quintessence:
-                self.G1 = GF.G(self.a)
-                self.f = GF.fplus(self.a)
-            else: self.G1 = 1.
-            # print (self.Y1, self.G1t, self.V12t, self.G1, self.f, GF.fplus(self.a))
+            self.x = np.log(1/(1.+self.z))
+            GF = GreenFunction(self.Omega0_m, Omega0_rc=self.Omega0_rc,w0=self.w0,wa=self.wa,H0=self.H0)
+            self.Y1 = GF.Y(self.x)
+            self.G1t = GF.mG1t(self.x)
+            self.V12t = GF.mV12t(self.x)
+            self.G1 = 1.
             
             # print ("setting EdS time approximation")
             # self.Y1 = 0.

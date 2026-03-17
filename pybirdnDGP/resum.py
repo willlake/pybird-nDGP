@@ -130,8 +130,7 @@ class Resum(object):
     def IRFilters(self, bird, soffset=1., LambdaIR=None, RescaleIR=1., window=None):
         """ Compute the IR-filters X and Y. """
         if LambdaIR is None: LambdaIR = self.LambdaIR
-        if self.co.exact_time and self.co.quintessence: Pin = bird.G1**2 * bird.Pin
-        else: Pin = bird.Pin
+        Pin = bird.Pin
         Coef = self.Xfft.Coef(bird.kin, Pin * exp(-bird.kin**2 / LambdaIR**2) / bird.kin**2, window=window)
         CoefsPow = np.einsum('n,ns->ns', Coef, self.XsPow)
         X02 = np.real(np.einsum('ns,ln->ls', CoefsPow, self.XM))

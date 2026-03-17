@@ -28,7 +28,7 @@ class Common(object):
 
     def __init__(self, Nl=2, kmin=0.001, kmax=0.25, km=1., kr=1., nd=3e-4, eft_basis='eftoflss',
         halohalo=True, with_cf=False, with_time=True, accboost=1., optiresum=False, orderresum=16, with_input_kernelfunc=False,
-        with_uvmatch=False, exact_time=False, quintessence=False, with_tidal_alignments=False, nonequaltime=False, keep_loop_pieces_independent=False, NDa=False,aini_g=0.001,aini_d=0.01):
+        with_uvmatch=False, exact_time=False, with_tidal_alignments=False, nonequaltime=False, keep_loop_pieces_independent=False):
         
         self.eft_basis = eft_basis
         self.halohalo = halohalo
@@ -41,14 +41,9 @@ class Common(object):
         self.with_uvmatch = with_uvmatch
         self.with_input_kernelfunc = with_input_kernelfunc
         self.exact_time = exact_time
-        self.quintessence = quintessence
-        # if self.quintessence: self.exact_time = True
         self.with_tidal_alignments = with_tidal_alignments
         self.nonequaltime = nonequaltime
         self.keep_loop_pieces_independent = keep_loop_pieces_independent
-        self.NDa = NDa
-        self.aini_g = aini_g
-        self.aini_d = aini_d
 
         if self.with_input_kernelfunc:
             self.exact_time = False

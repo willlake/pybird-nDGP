@@ -83,13 +83,19 @@ class Correlator(object):
                 default=None) ,
             "Omega0_m": Option("Omega0_m", float,
                 description="Fractional matter abundance at present time. To specify if \'with_exact_time\' is True.",
-                default=None) ,
+                default=0.3) ,
             "Omega0_rc": Option("Omega0_rc", float,
                 description="Strength of modifications of gravity at present time. To specify if \'with_exact_time\' is True.",
                 default=None) ,
+            "H0": Option("H0", float,
+                description="Hubble parameter. To specify if \'with_exact_time\' is True.",
+                default=67.74) ,
             "w0_fld": Option("w0_fld", float,
-                description="Dark energy equation of state parameter. To specify in presence of dark energy if \'with_exact_time\' is True (otherwise w0 = -1).",
-                default=None) ,
+                description="Dark energy equation of state parameter. To specify if \'with_exact_time\' is True (otherwise w0 = -1).",
+                default=-1.0) ,
+            "wa_fld": Option("wa_fld", float,
+                description="Dark energy equation of state parameter. To specify if \'with_exact_time\' is True (otherwise w0 = -1).",
+                default=0.0) ,
             "Kernel_func": Option("Kernel_func", (list, np.ndarray),
                 description="[G1,Y1,G1t,V12t]. To specify if \'with_input_kernelfunc\' is True.",
                 default=None) ,
@@ -164,9 +170,6 @@ class Correlator(object):
                 default=True) ,
             "with_exact_time": Option("with_exact_time", bool,
                 description="Exact time dependence or EdS approximation.",
-                default=False) ,
-            "with_quintessence": Option("with_quintessence", bool,
-                description="Clustering quintessence.",
                 default=False) ,
             "with_nonequal_time": Option("with_nonequal_time", bool,
                 description="Non equal time correlator. Automatically set \'with_time\' to False ",
@@ -257,16 +260,7 @@ class Correlator(object):
                 default=False) ,
             "keep_loop_pieces_independent": Option("keep_loop_pieces_independent", bool,
                 description="keep the loop pieces 13 and 22 independent (mainly for debugging)",
-                default=False) ,
-            "NDa": Option("NDa", bool,
-                description="Use the numerically calculated Growth factor or not",
-                default=False),
-            "aini_g": Option("aini_g", float,
-                description="The initial scale factor at which the initial conditions for D_+(a) and DD_+(a) are set",
-                default=0.001),
-            "aini_d": Option("aini_d", float,
-                description="The initial scale factor at which the initial conditions for D_-(a) and DD_-(a) are set",
-                default=0.01),
+                default=False) 
         }
 
         if config_dict is not None: self.set(config_dict, load_engines=load_engines)
@@ -435,10 +429,8 @@ class Correlator(object):
                          eft_basis=self.c["eft_basis"],halohalo=self.c["halohalo"], with_cf=self.c["with_cf"], 
                          with_time=self.c["with_time"], accboost=self.c["accboost"], optiresum=self.c["optiresum"],
                          with_input_kernelfunc=self.c["with_input_kernelfunc"],exact_time=self.c["with_exact_time"], 
-                         quintessence=self.c["with_quintessence"], with_uvmatch=self.c["with_uvmatch_2"],
-                         with_tidal_alignments=self.c["with_tidal_alignments"], nonequaltime=self.c["with_common_nonequal_time"], 
-                         keep_loop_pieces_independent=self.c["keep_loop_pieces_independent"],
-                         NDa=self.c["NDa"],aini_g=self.c["aini_g"],aini_d=self.c["aini_d"])
+                         with_uvmatch=self.c["with_uvmatch_2"],with_tidal_alignments=self.c["with_tidal_alignments"],
+                         nonequaltime=self.c["with_common_nonequal_time"], keep_loop_pieces_independent=self.c["keep_loop_pieces_independent"])
         if load_engines:
             self.nonlinear = NonLinear(load=True, save=True, NFFT=256*self.c["fftaccboost"], fftbias=self.c["fftbias"], co=self.co)
             if self.c["with_uvmatch_2"]: self.matching = Matching(self.nonlinear, co=self.co)
@@ -585,8 +577,6 @@ class Correlator(object):
         if "bm" in self.c["output"]: self.c["halohalo"] = False
         else: self.c["halohalo"] = True
 
-        if self.c["with_quintessence"]: self.c["with_exact_time"] = True
-
         self.c["with_common_nonequal_time"] = False # this is to pass for the common Class to setup the numbers of loops (22 and 13 gathered by default)
         if self.c["with_nonequal_time"]:
             self.c.update({"with_bias": False, "with_time": False, "with_common_nonequal_time": True}) # with_common_nonequal_time is to pass for the common Class to setup the numbers of loops (22 and 13 seperated since they have different time dependence)
@@ -641,7 +631,7 @@ class Correlator(object):
                 cosmo["D2"] = M.scale_independent_growth_factor(self.c["z2"])
                 cosmo["f1"] = M.scale_independent_growth_factor_f(self.c["z1"])
                 cosmo["f2"] = M.scale_independent_growth_factor_f(self.c["z2"])
-            if self.c["with_exact_time"] or self.c["with_quintessence"]:
+            if self.c["with_exact_time"]:
                 cosmo["z"] = self.c["z"]
                 cosmo["Omega0_m"] = M.Omega0_m()
                 if "w0_fld" in cosmo_dict: cosmo["w0_fld"] = cosmo_dict["w0_fld"]
@@ -653,20 +643,6 @@ class Correlator(object):
                 cosmo["Dz"] = np.array([M.scale_independent_growth_factor(z) for z in self.c["redshift_bin_zz"]])
                 cosmo["fz"] = np.array([M.scale_independent_growth_factor_f(z) for z in self.c["redshift_bin_zz"]])
                 cosmo["rz"] = np.array([comoving_distance(z) for z in self.c["redshift_bin_zz"]])
-
-            if self.c["with_quintessence"]:
-                # starting deep inside matter domination and evolving to the total adiabatic linear power spectrum.
-                # This does not work in the general case, e.g. with massive neutrinos (okish for minimal mass though)
-                # This does not work for 'with_redshift_bin': True. # eventually to code up
-                zm = 5. # z in matter domination
-                def scale_factor(z): return 1/(1.+z)
-                Omega0_m = cosmo["Omega0_m"]
-                w = cosmo["w0_fld"]
-                GF = GreenFunction(Omega0_m, w=w, quintessence=True,NDa=self.c["NDa"],aini=self.c["a_ini"])
-                Dq = GF.D(scale_factor(zfid)) / GF.D(scale_factor(zm))
-                Dm = M.scale_independent_growth_factor(self.c["z"]) / M.scale_independent_growth_factor(zm)
-                cosmo["pk_lin"] *= Dq**2 / Dm**2 * ( 1 + (1+w)/(1.-3*w) * (1-Omega0_m)/Omega0_m * (1+zm)**(3*w) )**2 # 1611.07966 eq. (4.15)
-                cosmo["f"] = GF.fplus(1/(1.+self.c["z"]))
 
 
             if self.c["with_nnlo_counterterm"]: cosmo["kk"], cosmo["Psmooth"], cosmo["pk_lin"] = self.get_smooth_wiggle_resc(cosmo["kk"], cosmo["pk_lin"],cosmo["h"])

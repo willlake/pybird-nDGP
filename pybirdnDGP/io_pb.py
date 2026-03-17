@@ -17,7 +17,7 @@ class ReadWrite(object):
 
     def check(self, c, d, verbose=True):
         
-        options_in_config = ['with_bao_rec', "with_ap", "with_survey_mask", "with_binning", "with_wedge", "with_redshift_bin", "with_stoch", "with_nnlo_counterterm"]
+        options_in_config = ['with_bao_rec', "with_ap", "with_survey_mask", "with_binning", "with_wedge", "with_redshift_bin", "with_stoch", "with_nnlo_counterterm","with_exact_time"]
         for keys in options_in_config:
             if not keys in c: c[keys] = False
                 
@@ -27,6 +27,7 @@ class ReadWrite(object):
             elif verbose: print ('sky: %s' % sky)
             if c['output'] not in d[sky]: raise Exception("no output: %s in data" % c["output"])
             elif verbose: print ('output: %s' % c['output'])
+                
             if c['with_wedge']:
                 if c['multipole'] != 3: c["multipole"] = 3
                 if c['wedge_type'] not in ['PA-w1-w2', 'Q0-w1-w2']: raise Exception("no wedge_type %s")
@@ -62,8 +63,8 @@ class ReadWrite(object):
         return
 
     def config(self, c, fd_sky):
-        options_for_correlator = ["output", "multipole", "km", "kr", "nd", 
-                                  "eft_basis", "with_stoch", "with_nnlo_counterterm", 
+        options_for_correlator = ["output", "multipole", "km", "kr",
+                                  "eft_basis", "with_stoch", "with_nnlo_counterterm", "with_exact_time",
                                   "with_ap", "with_survey_mask", "with_binning", "with_wedge", "with_redshift_bin"]
 
         fc_sky = [] # skylist of formatted config dict for Correlator
@@ -71,7 +72,8 @@ class ReadWrite(object):
         for sky, fd in zip(c['sky'].keys(), fd_sky):
             fc = {}
             for option in options_for_correlator: fc[option] = c[option]
-            fc['z'] = fd['z']
+            fc['nd']    = fd['fid']['nd'] 
+            fc['z']     = fd['z']
             fc['xdata'] = fd['x']
             if 'Pk' in c['output']: fc['kmax'] = max([k[-1] for k in fd['x_arr']]) + 0.05 # we take some margin
             if c['with_ap']: fc.update({'H_fid': fd['fid']['H'], 'D_fid': fd['fid']['D']})
@@ -84,6 +86,14 @@ class ReadWrite(object):
             fc_sky.append(fc) 
         
         return fc_sky
+
+    def mtpole_shape(self,mtpole):
+        if mtpole<2:
+            return 1
+        elif mtpole==2:
+            return 2
+        else:
+            return 3
 
     def format(self, c, data, verbose=True):
         
@@ -99,6 +109,8 @@ class ReadWrite(object):
             x_arr = np.array([dd['x'] for i in range(c['multipole'])])
             y_arr = np.array([dd['l%s'%(2*i)] for i in range(c['multipole'])])
             cov = dd['cov']
+            if c["rescale_cov"]:
+                cov*=d['fid']['Veff']/c['Veff'][sky]
 
             if c['with_wedge']:
                 if c['wedge_type'] == 'PA-w1-w2': mat = np.array([[1., -3./7., 11./56.], [1., -3/8., 15/128.], [1., 3/8., -15./128.]])
@@ -107,9 +119,10 @@ class ReadWrite(object):
                 cov_resh = cov.reshape((3, cov.shape[0] // 3, 3, cov.shape[1] // 3))
                 cov = np.einsum('al,bm,lkmj->akbj', mat, mat, cov_resh).reshape(cov.shape)
 
-            y_err = np.sqrt(np.diag(cov)).reshape(3,-1)
+            y_err = np.sqrt(np.diag(cov)).reshape(self.mtpole_shape(c['multipole']),-1)
 
             fdata = { 'z': d['z']['eff'], 
+                      'fid': d['fid'],
                       'mask_arr': xmask,                                               # mask for theory model for plotting
                       'x_arr': [x_arr[i, xmask_i] for i, xmask_i in enumerate(xmask)], # k in [h/Mpc] or s in [Mpc/h]
                       'y_arr': [y_arr[i, xmask_i] for i, xmask_i in enumerate(xmask)], # pk in [Mpc/h]^3 or cf for plotting
@@ -132,7 +145,6 @@ class ReadWrite(object):
                 fdata['p'] *= (dd['nsims'] - len(cmask) - 2) / (dd['nsims'] - 1.) # Hartlap factor correction
                 if verbose: print('%s: Hartlap factor correction on precision matrix estimated from %s mocks for %s bins' % (sky, dd['nsims'], len(cmask)))
 
-            if c['with_ap']: fdata['fid'] = d['fid']
             if c["with_survey_mask"]: fdata.update({'survey_mask_arr_p': dd['survey_mask']['arr_p'], 
                                                     'survey_mask_mat_kp': dd['survey_mask']['mat_kp'][:c['multipole'],:c['multipole']]})
             if c['with_binning']: fdata['binsize'] = dd['binsize'] 
@@ -250,4 +262,3 @@ class ReadWrite(object):
         for key, value in out['eft_parameters'].items(): header += "%s: %.4f, " % (key, value)
         header += "\n"
         return header
-

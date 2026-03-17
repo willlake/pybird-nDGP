@@ -9,7 +9,7 @@ import numpy as np
 
 class GreenFunction(object):
    
-    def __init__(self, Omega0_m, Omega0_rc=None, w0=-1.0,wa=0.0, H0=70, x0=-7.,x1=0.,nxgrid=500,vectorize=False):
+    def __init__(self, Omega0_m, Omega0_rc=None, w0=-1.0,wa=0.0, H0=70, x0=-7.,x1=0.,nxgrid=500,vectorize=False,need_growth=True):
         self.vectorize = vectorize
         self.Omega0_m = Omega0_m
         self.Omega0_rc = Omega0_rc
@@ -34,7 +34,8 @@ class GreenFunction(object):
         self.expansion_model = "w0wa"
 
         self.epsrel = 1e-6
-        self.get_DDD_plusminus()
+        if need_growth:
+            self.get_DDD_plusminus()
 
     def beta(self, x):
         r"""
