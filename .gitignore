@@ -176,3 +176,16 @@ cython_debug/
 # static files generated from Django application using `collectstatic`
 media
 static
+
+# Large data / output files
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.dat
+*.fits
+*.tar
+*.tar.gz
+*.zip
