@@ -200,12 +200,13 @@ class Bird(object):
         if self.co.exact_time:
             self.Omega0_m = cosmo["Omega0_m"]
             self.Omega0_rc = cosmo["Omega0_rc"]
+            self.screening = cosmo["screening"]
             self.H0 = cosmo["H0"]
             self.w0 = cosmo["w0_fld"]
             self.wa = cosmo["wa_fld"]
             self.z = cosmo["z"]
             self.x = np.log(1/(1.+self.z))
-            GF = GreenFunction(self.Omega0_m, Omega0_rc=self.Omega0_rc,w0=self.w0,wa=self.wa,H0=self.H0)
+            GF = GreenFunction(self.Omega0_m, Omega0_rc=self.Omega0_rc,w0=self.w0,wa=self.wa,H0=self.H0,screening=self.screening)
             self.Y1 = GF.Y(self.x)
             self.G1t = GF.mG1t(self.x)
             self.V12t = GF.mV12t(self.x)

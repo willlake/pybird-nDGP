@@ -9,7 +9,7 @@ import numpy as np
 
 class GreenFunction(object):
    
-    def __init__(self, Omega0_m, Omega0_rc=None, w0=-1.0,wa=0.0, H0=70, x0=-7.,x1=0.,nxgrid=500,vectorize=False,need_growth=True):
+    def __init__(self, Omega0_m, Omega0_rc=None, w0=-1.0,wa=0.0, H0=70, screening=True,x0=-7.,x1=0.,nxgrid=500,vectorize=False,need_growth=True):
         self.vectorize = vectorize
         self.Omega0_m = Omega0_m
         self.Omega0_rc = Omega0_rc
@@ -19,8 +19,10 @@ class GreenFunction(object):
         if Omega0_rc is not None:
             self.Omega0_rc = Omega0_rc
             self.nDGP = True
+            self.screening = screening
         else:
             self.nDGP = False
+            self.screening = False
             
         self.x1  = x1 # the final time used to set initial condition for decay mode
         self.x0  = x0 # the initial time for ODE
@@ -64,7 +66,7 @@ class GreenFunction(object):
         r"""
         nu2(a) = -1/2 * (H/H0)^2 * 1/Omega0_rc * (1/(3 beta))^3
         """
-        if self.nDGP:
+        if self.nDGP and self.screening:
             b = self.beta(x)
             H_over_H0 = self.H(x) / self.H0
             inv3b = 1.0 / (3.0 * b)
@@ -77,7 +79,7 @@ class GreenFunction(object):
         r"""
         nu22(a) = 2 * (H/H0)^4 * 1/Omega0_rc^2 * (1/(3 beta))^5
         """
-        if self.nDGP:
+        if self.nDGP and self.screening:
             b = self.beta(x)
             H_over_H0 = self.H(x) / self.H0
             inv3b = 1.0 / (3.0 * b)
